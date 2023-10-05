@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Platform.Terraform.Modules.Engineering</id>
+    <version>0.0.0</version>
+    <description>Terraform modules for Engineering to use to create environments</description>
+    <authors>CPCE Ltd</authors>
+  </metadata>
+  <files>
+    <file src="*.*" />
+    <file src="**/*.*" exclude="**/*.md;**/.gitignore" />
+  </files>
+</package>

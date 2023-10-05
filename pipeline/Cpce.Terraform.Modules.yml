@@ -1,0 +1,83 @@
+name: '$(BuildDefinitionName)-$(SourceBranchName)-$(version.major).$(version.minor).$(version.patch)'
+
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  version.major: 0
+  version.minor: 1
+  version.patch: $[counter(format('{0}.{1}', variables['version.major'], variables['version.minor']), 0)]
+  terraform_modules_container: 'Terraform-Modules'
+  package.label.prefix: CI
+  package.version: '$(version.major).$(version.minor).$(version.patch)'  
+
+pool: CPCE-VS2019
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        steps:
+          - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+            - task: PowerShell@2
+              displayName: 'Append short git SHA to package version'
+              inputs:
+                targetType: 'inline'
+                script: |
+                  $longSha = "$(Build.SourceVersion)";
+                  $shortSha = $longSha.Substring(0,7);
+                  Write-Host "##vso[task.setvariable variable=package.version;]$(package.version)-$(package.label.prefix).$shortSha"
+
+          - task: NuGetCommand@2
+            displayName: 'Create Cpce.Terraform.Modules.ProductTeams Package'
+            inputs:
+              command: 'pack'
+              packagesToPack: '$(System.DefaultWorkingDirectory)/src/Cpce.Terraform.Modules.ProductTeams.nuspec'
+              packDestination: '$(Build.ArtifactStagingDirectory)'
+              versioningScheme: byEnvVar
+              versionEnvVar: package.version
+
+          - task: NuGetCommand@2
+            displayName: 'Create Cpce.Terraform.Modules.Engineering Package'
+            inputs:
+              command: 'pack'
+              packagesToPack: '$(System.DefaultWorkingDirectory)/src/Cpce.Terraform.Modules.Engineering.nuspec'
+              packDestination: '$(Build.ArtifactStagingDirectory)'
+              versioningScheme: byEnvVar
+              versionEnvVar: package.version
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)'
+              artifactName: '$(terraform_modules_container)'
+              artifactType: 'pipeline'
+
+  - stage: Test
+    jobs:
+      - job: Test
+        steps:
+          - pwsh: Write-Output 'This is where you run some tests'
+            name: RunSomeTests
+            displayName: 'Run some tests'
+
+  - stage: Publish
+    jobs:
+      - job: Publish
+        steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              artifactName: '$(terraform_modules_container)'
+              itemPattern: '**'
+              targetPath: '$(Build.StagingDirectory)/'
+
+          - task: NuGetCommand@2
+            displayName: 'Push all packages'
+            inputs:
+              command: 'push'
+              packagesToPush: '$(Build.StagingDirectory)/**/*.nupkg;!$(Build.StagingDirectory)/**/*.symbols.nupkg'
+              nuGetFeedType: 'internal'
+              publishVstsFeed: 'cpce-limited'
+              publishPackageMetadata: true

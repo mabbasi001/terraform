@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Platform.Terraform.Modules.ProductTeams</id>
+    <version>0.0.0</version>
+    <description>Terraform modules for Product Teams to use to create the Azure resources required by their applications</description>
+    <authors>CPCE Ltd. Engineering Team</authors>
+  </metadata>
+  <files>
+    <file src="**/cpce_eventgrid_subscription/*.tf" />
+    <file src="**/cpce_eventgrid_topic/*.tf" />
+    <file src="**/cpce_resource_group/*.tf" />
+    <file src="**/cpce_storage_account/*.tf" />
+  </files>
+</package>

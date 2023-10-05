@@ -1,0 +1,45 @@
+trigger:
+  - main
+
+resources:
+  repositories:
+    - repository: pipeline-templates
+      type: git
+      name: Platform/pipeline-templates
+      ref: refs/tags/1.0.10
+
+pool:
+  vmImage: windows-latest
+
+jobs:
+  - job: Terraform_Docs
+    displayName: Update Terraform-docs Documentation
+    steps:
+      - checkout: self
+      - pwsh: |
+          choco install terraform-docs
+        displayName: Install terraform-docs
+      - pwsh: |
+          $paths = Get-ChildItem -Path $(Build.SourcesDirectory)\src -Recurse -Directory -Force -ErrorAction SilentlyContinue | Select-Object FullName
+          foreach ($path in $paths) 
+          {
+            $log = 'terraform-docs md table '+$path.FullName+' --output-file README.md'
+            Write-Host $log
+            terraform-docs md table $path.FullName --output-file README.md
+          }
+        displayName: Run terraform-docs across whole repository
+      - pwsh: |
+          Remove-Item '$(Build.SourcesDirectory)\src\Azure\README.md'
+          Remove-Item '$(Build.SourcesDirectory)\src\Random\README.md'
+          git config http.extraheader "AUTHORIZATION: bearer $(System.AccessToken)"
+          git config user.email "azuredevops@cpce.com"
+          git config user.name "Azure DevOps"
+          git add .
+          git commit -m "AzDO: Updated terraform-docs on main [skip ci]"
+          git push origin HEAD:$(Build.SourceBranch)
+        displayName: Push updates to main
+  - template: src/version-template/version-repository.yml@pipeline-templates
+    parameters:
+      major: 1
+      minor: 0
+      dependsOn: Terraform_Docs
